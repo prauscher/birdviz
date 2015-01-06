@@ -20,5 +20,5 @@ will give you a svg-graph in example/howard.svg.
 
 Examples of my routers can be found in the examples-folder
 
-![rajesh.conf](https://raw.githubusercontent.com/prauscher/birdviz/master/example/rajesh.svg)
-![howard.conf](https://raw.githubusercontent.com/prauscher/birdviz/master/example/howard.svg)
+![rajesh.conf](https://raw.githubusercontent.com/prauscher/birdviz/master/examples/rajesh.svg)
+![howard.conf](https://raw.githubusercontent.com/prauscher/birdviz/master/examples/howard.svg)
