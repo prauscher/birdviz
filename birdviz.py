@@ -8,7 +8,7 @@ import pygraphviz as pgv
 if len(sys.argv) != 2:
     raise Exception("Usage: birdviz.py <FILE>")
 
-DEFAULT_TABLE_NAME = "default"
+DEFAULT_TABLE_NAME = "master"
 
 config = parse(open(sys.argv[1]))
 graph = pgv.AGraph(layout="dot", label="Router " + config["router"][-1][1], directed=True, strict=False)
