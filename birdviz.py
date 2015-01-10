@@ -89,7 +89,7 @@ for _p in config["protocol"]:
             label = label + "\n" + "\n".join("\n".join(interfaces) for interfaces in protocol["interface"])
         elif type == "kernel":
             if "kernel" in protocol:
-                label = label + "\n" + "table " + protocol["kernel"][-1][0]
+                label = label + "\n" + "table " + protocol["kernel"][-1][1]
         elif type == "bgp":
             label = label + "\n" + "neighbor " + " ".join(protocol["neighbor"][-1])
         elif type == "ospf":
