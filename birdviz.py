@@ -16,17 +16,24 @@ graph = pgv.AGraph(layout="dot", label="<<font point-size='22'><b>Router {}</b><
 
 def parse_filter(p):
     if p[0] == "all":
-        # note: empty string is false, so use space
-        return " "
+        return True
     if p[0] == "none":
-        return None
+        return False
     if p[0] == "filter":
         if isinstance(p[1], str):
-            return "filter " + p[1]
+            return p[1]
         else:
-            return "filtered"
+            return "(filter)"
     if p[0] == "where":
-        return "filtered"
+        return "(filter)"
+
+def filter_edge(flt):
+    res = dict()
+    if isinstance(flt, str):
+        res.update(style="dashed")
+        if flt != "(filter)":
+            res.update(label="<<i>{}</i>>".format(flt))
+    return res
 
 # Tables
 graph.add_node("table_" + DEFAULT_TABLE_NAME, label="<<b>table {}</b>>".format(DEFAULT_TABLE_NAME), color="red", shape="oval")
@@ -74,18 +81,18 @@ for _p in config["protocol"]:
     if type == "pipe":
         dummy, peer_table = protocol["peer"][-1]
         if import_mode:
-            graph.add_edge("table_" + peer_table, "table_" + table, label=import_mode)
+            graph.add_edge("table_" + peer_table, "table_" + table, **filter_edge(import_mode))
         if export_mode:
-            graph.add_edge("table_" + table, "table_" + peer_table, label=export_mode)
+            graph.add_edge("table_" + table, "table_" + peer_table, **filter_edge(export_mode))
     else:
         if type == "static":
             # Static protocols never export a route
-            export_mode = None
+            export_mode = False
             label = "<br/>".join(" ".join(route) for route in protocol["route"])
         elif type == "device":
             # device protocol never exports or import routes
-            export_mode = None
-            import_mode = None
+            export_mode = False
+            import_mode = False
             label = ""
         elif type == "direct":
             label = "<br/>".join("<br/>".join(interfaces) for interfaces in protocol["interface"])
@@ -103,9 +110,9 @@ for _p in config["protocol"]:
 
         graph.add_node("proto_" + name, label="<<b>{} {}</b><br/>{}>".format(type, name, label), color="blue", shape="box")
         if import_mode:
-            graph.add_edge("proto_" + name, "table_" + table, label=import_mode)
+            graph.add_edge("proto_" + name, "table_" + table, **filter_edge(import_mode))
         if export_mode:
-            graph.add_edge("table_" + table, "proto_" + name, label=export_mode)
+            graph.add_edge("table_" + table, "proto_" + name, **filter_edge(export_mode))
 #    else:
 #        print(type)
 
