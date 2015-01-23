@@ -29,10 +29,10 @@ def parse_filter(p):
         return "filtered"
 
 # Tables
-graph.add_node("table_" + DEFAULT_TABLE_NAME, color="red")
+graph.add_node("table_" + DEFAULT_TABLE_NAME, color="red", shape="oval")
 if "table" in config:
     for table, in config["table"]:
-        graph.add_node("table_" + table, color="red")
+        graph.add_node("table_" + table, color="red", shape="oval")
 
 template_counter = {}
 templates = {}
@@ -70,7 +70,7 @@ for _p in config["protocol"]:
     export_mode = parse_filter(protocol["export"][-1]) if "export" in protocol else "none"
 
     if type == "pipe":
-        dummy, peer_table = protocol["peer"][-1];
+        dummy, peer_table = protocol["peer"][-1]
         if import_mode != "none":
             graph.add_edge("table_" + peer_table, "table_" + table, label=import_mode if import_mode != "all" else "")
         if export_mode != "none":
@@ -95,7 +95,7 @@ for _p in config["protocol"]:
         elif type == "ospf":
             label = label + "\n" + "\n".join(area + ": " + " ".join(interface for interface, interface_config in area_config["interface"]) for area, area_config in protocol["area"])
 
-        graph.add_node(label, color="blue")
+        graph.add_node(label, color="blue", shape="box")
         if import_mode != "none":
             graph.add_edge(label, "table_" + table, label=import_mode if import_mode != "all" else "")
         if export_mode != "none":
