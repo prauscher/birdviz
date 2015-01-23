@@ -4,7 +4,7 @@ from tokenizer import Tokenizer
 
 def parse(stream):
     tokenizer = Tokenizer(stream)
-    tokenizer.wordchars += "./"
+    tokenizer.wordchars += ".:%/"
     return _parse_commands(tokenizer)
 
 def _parse_arguments(tokenizer):
