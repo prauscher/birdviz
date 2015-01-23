@@ -11,7 +11,7 @@ if len(sys.argv) != 2:
 DEFAULT_TABLE_NAME = "master"
 
 config = parse(open(sys.argv[1]))
-graph = pgv.AGraph(layout="dot", label="Router " + config["router"][-1][1], directed=True, strict=False)
+graph = pgv.AGraph(layout="dot", label="<<font point-size='22'><b>Router {}</b></font>>".format(config["router"][-1][1]), labelloc="t", directed=True, strict=False)
 
 # http://stackoverflow.com/questions/38987/how-can-i-merge-two-python-dictionaries-in-a-single-expression
 def merge_dicts(a, b):
@@ -29,10 +29,10 @@ def parse_filter(p):
         return "filtered"
 
 # Tables
-graph.add_node("table_" + DEFAULT_TABLE_NAME, color="red", shape="oval")
+graph.add_node("table_" + DEFAULT_TABLE_NAME, label="<<b>table {}</b>>".format(DEFAULT_TABLE_NAME), color="red", shape="oval")
 if "table" in config:
     for table, in config["table"]:
-        graph.add_node("table_" + table, color="red", shape="oval")
+        graph.add_node("table_" + table, label="<<b>table {}</b>>".format(table), color="red", shape="oval")
 
 template_counter = {}
 templates = {}
@@ -76,30 +76,34 @@ for _p in config["protocol"]:
         if export_mode != "none":
             graph.add_edge("table_" + table, "table_" + peer_table, label=export_mode if export_mode != "all" else "")
     else:
-        label = type + "_" + name
         if type == "static":
             # Static protocols never export a route
             export_mode = "none"
-            label = label + "\n" + "\n".join(" ".join(route) for route in protocol["route"])
+            label = "<br/>".join(" ".join(route) for route in protocol["route"])
         elif type == "device":
             # device protocol never exports or import routes
             export_mode = "none"
             import_mode = "none"
+            label = ""
         elif type == "direct":
-            label = label + "\n" + "\n".join("\n".join(interfaces) for interfaces in protocol["interface"])
+            label = "<br/>".join("<br/>".join(interfaces) for interfaces in protocol["interface"])
         elif type == "kernel":
             if "kernel" in protocol:
-                label = label + "\n" + "table " + protocol["kernel"][-1][1]
+                label = "kernel table " + protocol["kernel"][-1][1]
+            else:
+                label = ""
         elif type == "bgp":
-            label = label + "\n" + "neighbor " + " ".join(protocol["neighbor"][-1])
+            label = "neighbor " + " ".join(protocol["neighbor"][-1])
         elif type == "ospf":
-            label = label + "\n" + "\n".join(area + ": " + " ".join(interface for interface, interface_config in area_config["interface"]) for area, area_config in protocol["area"])
+            label = "<br/>".join(area + ": " + " ".join(interface for interface, interface_config in area_config["interface"]) for area, area_config in protocol["area"])
+        else:
+            label = ""
 
-        graph.add_node(label, color="blue", shape="box")
+        graph.add_node("proto_" + name, label="<<b>{} {}</b><br/>{}>".format(type, name, label), color="blue", shape="box")
         if import_mode != "none":
-            graph.add_edge(label, "table_" + table, label=import_mode if import_mode != "all" else "")
+            graph.add_edge("proto_" + name, "table_" + table, label=import_mode if import_mode != "all" else "")
         if export_mode != "none":
-            graph.add_edge("table_" + table, label, label=export_mode if export_mode != "all" else "")
+            graph.add_edge("table_" + table, "proto_" + name, label=export_mode if export_mode != "all" else "")
 #    else:
 #        print(type)
 
