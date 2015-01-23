@@ -12,7 +12,11 @@ if len(sys.argv) != 2:
 DEFAULT_TABLE_NAME = "master"
 
 config = parse(open(sys.argv[1]))
-graph = pgv.AGraph(layout="dot", label="<<font point-size='22'><b>Router {}</b></font>>".format(config["router"][-1][1]), labelloc="t", directed=True, strict=False)
+graph = pgv.AGraph(layout="dot", fontname="Monospace", fontsize=22, label="<<b>Router {}</b>>".format(config["router"][-1][1]), labelloc="t", directed=True, strict=False)
+
+graph.node_attr['fontname'] = "Monospace"
+graph.edge_attr['fontname'] = "Monospace"
+graph.edge_attr['fontsize'] = 8
 
 def parse_filter(p):
     if p[0] == "all":
