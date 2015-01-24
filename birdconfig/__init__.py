@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from .tokenizer import Tokenizer
+from collections import defaultdict
 
 def parse(stream):
     tokenizer = Tokenizer(stream)
@@ -28,7 +29,7 @@ def _parse_arguments(tokenizer):
     return tuple(args)
 
 def _parse_commands(tokenizer, end=None):
-    parsed = dict()
+    parsed = defaultdict(list)
     while True:
         try:
             command = tokenizer.safe_get()
@@ -37,8 +38,6 @@ def _parse_commands(tokenizer, end=None):
         if command == end:
             break
 
-        if command not in parsed:
-            parsed[command] = []
         parsed[command].append(_parse_arguments(tokenizer))
 
     return parsed
