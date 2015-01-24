@@ -14,7 +14,7 @@ args = parser.parse_args()
 DEFAULT_TABLE_NAME = "master"
 
 config = birdconfig.parse(open(args.infile))
-graph = pgv.AGraph(layout="dot", fontname="Monospace", fontsize=22, label="<<b>Router {}</b>>".format(config["router"][-1][1]), labelloc="t", directed=True, strict=False)
+graph = pgv.AGraph(layout="dot", rankdir="LR", fontname="Monospace", fontsize=22, label="<<b>Router {}</b>>".format(config["router"][-1][1]), labelloc="t", directed=True, strict=False)
 
 graph.node_attr['fontname'] = "Monospace"
 graph.edge_attr['fontname'] = "Monospace"
