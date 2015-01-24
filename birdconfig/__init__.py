@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from tokenizer import Tokenizer
+from .tokenizer import Tokenizer
 
 def parse(stream):
     tokenizer = Tokenizer(stream)

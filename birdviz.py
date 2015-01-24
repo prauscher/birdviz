@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
-from parser import parse
+import birdconfig
 from collections import defaultdict
 import pygraphviz as pgv
 
@@ -11,7 +11,7 @@ if len(sys.argv) != 2:
 
 DEFAULT_TABLE_NAME = "master"
 
-config = parse(open(sys.argv[1]))
+config = birdconfig.parse(open(sys.argv[1]))
 graph = pgv.AGraph(layout="dot", fontname="Monospace", fontsize=22, label="<<b>Router {}</b>>".format(config["router"][-1][1]), labelloc="t", directed=True, strict=False)
 
 graph.node_attr['fontname'] = "Monospace"
