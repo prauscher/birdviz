@@ -9,6 +9,7 @@ import pygraphviz as pgv
 import argparse
 parser = argparse.ArgumentParser(description="BIRD/BIRD6 config visualizer")
 parser.add_argument("--compress", "-c", action="store_true", default=False, help="compress templated protocols into single nodes and approximate their imports/exports")
+parser.add_argument("--group", "-g", metavar="TYPE", type=lambda x: set(x.split(',')), default=set(), help="group nodes of the given comma-separated types (table, template, static, kernel, bgp, ...) on the same rank")
 parser.add_argument("infile", metavar="FILE", help="config file to visualize")
 args = parser.parse_args()
 
@@ -64,11 +65,16 @@ def find_option(p, default_template, *, use_default=True):
 
 # create table nodes
 
+rank_groups = defaultdict(lambda: graph)
+for g in args.group:
+    rank_groups[g] = graph.add_subgraph(name="group_" + g, rank="same")
+
+
 tables = set(table[0] for table in config["table"])
 tables.add("master")
 
 for table in tables:
-    graph.add_node("table_{}".format(table), label="<<b>table {}</b>>".format(table), color="red", shape="oval")
+    rank_groups["table"].add_node("table_{}".format(table), label="<<b>table {}</b>>".format(table), color="red", shape="oval")
 
 
 # create template clusters/nodes
@@ -93,6 +99,7 @@ for _t in config["template"]:
     if args.compress:
         template["_node"] = "template_" + name
         graph.add_node(template["_node"], label="<{}<br/>>".format(label), shape="box")
+        rank_groups["template"].add_node(graph.get_node(template["_node"]))
         if "_template" in template:
             # TODO: test this
             graph.add_edge(template["_node"], template["_template"]["_node"])
@@ -150,6 +157,7 @@ for _p in config["protocol"]:
             instance["_node"] = "proto_" + name
             subgraph = find_key(instance, "_subgraph", default=graph)
             subgraph.add_node(instance["_node"], label="<{}>".format(label), color="blue", shape="box")
+            rank_groups[protocol].add_node(subgraph.get_node(instance["_node"]))
 
 
 # create edges
