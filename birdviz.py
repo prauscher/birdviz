@@ -8,6 +8,7 @@ import pygraphviz as pgv
 
 import argparse
 parser = argparse.ArgumentParser(description="BIRD/BIRD6 config visualizer")
+parser.add_argument("--compress", "-c", action="store_true", default=False, help="compress templated protocols into single nodes and approximate their imports/exports")
 parser.add_argument("infile", metavar="FILE", help="config file to visualize")
 args = parser.parse_args()
 
@@ -20,6 +21,9 @@ graph.edge_attr["fontname"] = "Monospace"
 graph.edge_attr["fontsize"] = 8
 
 def parse_filter(p):
+    if p is None:
+        return None
+
     if p[0] == "all":
         return True
     if p[0] == "none":
@@ -33,36 +37,75 @@ def parse_filter(p):
         return "(filter)"
 
 def filter_edge(flt):
-    res = dict()
+    res = dict(key=flt)
     if isinstance(flt, str):
         res.update(style="dashed")
         if flt != "(filter)":
             res.update(label="<<i>{}</i>>".format(flt))
     return res
 
-# Tables
-graph.add_node("table_master", label="<<b>table master</b>>", color="red", shape="oval")
-if "table" in config:
-    for table, in config["table"]:
-        graph.add_node("table_" + table, label="<<b>table {}</b>>".format(table), color="red", shape="oval")
+def find_key(p, key, default=None):
+    def recur(p):
+        if key in p:
+            return p[key]
+        elif "_template" in p:
+            return recur(templates[p["_template"]])
+        else:
+            return default
+    return recur(p)
+
+def find_option(p, default_template, *, use_default=True):
+    option = birdconfig.parse(default_template)
+    assert(len(option.keys()) == 1)
+    default = next(iter(option.values())) if use_default else [None]
+    option = find_key(p, next(iter(option.keys())), default=default)
+    return option[-1]
+
+
+# create table nodes
+
+tables = set(table[0] for table in config["table"])
+tables.add("master")
+
+for table in tables:
+    graph.add_node("table_{}".format(table), label="<<b>table {}</b>>".format(table), color="red", shape="oval")
+
+
+# create template clusters/nodes
 
 template_ids = defaultdict(lambda: 0)
 templates = {}
-if "template" in config:
-    for _t in config["template"]:
-        protocol = _t[0]
-        if len(_t) > 2:
-            name = _t[1]
-        else:
-            template_ids[protocol] += 1
-            name = protocol + str(template_ids[protocol])
+for _t in config["template"]:
+    protocol = _t[0]
+    if len(_t) > 2:
+        name = _t[1]
+    else:
+        template_ids[protocol] += 1
+        name = protocol + str(template_ids[protocol])
 
-        templates[name] = dict()
-        if len(_t) > 3 and _t[2] == "from":
-            templates[name].update(templates[_t[3]])
-        templates[name].update(_t[-1])
+    template = _t[-1]
+    template["_protocol"] = protocol
+    if len(_t) > 3 and _t[2] == "from":
+        template["_template"] = _t[3]
+
+    label = "<font point-size='16'><b>template {}</b></font>".format(name)
+
+    if args.compress:
+        template["_node"] = "template_" + name
+        graph.add_node(template["_node"], label="<{}<br/>>".format(label), shape="box")
+        if "_template" in template:
+            # TODO: test this
+            graph.add_edge(template["_node"], template["_template"]["_node"])
+    else:
+        subgraph = find_key(template, "_subgraph", default=graph)
+        template["_subgraph"] = subgraph.add_subgraph(name="cluster_" + name, label="<{}>".format(label))
+    templates[name] = template
+
+
+# create instance nodes
 
 instance_ids = defaultdict(lambda: 0)
+instances = {}
 for _p in config["protocol"]:
     protocol = _p[0]
     if len(_p) > 2:
@@ -71,52 +114,69 @@ for _p in config["protocol"]:
         instance_ids[protocol] += 1
         name = protocol + str(instance_ids[protocol])
 
-    instance = dict()
+    instance = _p[-1]
+    instance["_protocol"] = protocol
     if len(_p) > 3 and _p[2] == "from":
-        instance.update(templates[_p[3]])
-    instance.update(_p[-1])
+        instance["_template"] = _p[3]
+    instances[name] = instance
 
-    table = "master"
-    if "table" in instance:
-        table, = instance["table"][-1]
+    if protocol != "pipe":
+        if protocol == "static":
+            label = "<br/>".join(" ".join(route) for route in find_key(instance, "route", default=set()))
+        elif protocol == "device":
+            label = ""
+        elif protocol == "direct":
+            label = "<br/>".join("<br/>".join(interfaces) for interfaces in find_key(instance, "interface", default=set()))
+        elif protocol == "kernel":
+            kernel_table = find_option(instance, "kernel table none;", use_default=False)
+            if kernel_table:
+                label = "kernel table " + kernel_table[1]
+            else:
+                label = ""
+        elif protocol == "bgp":
+            label = "neighbor " + " ".join(find_option(instance, "neighbor none;", use_default=False))
+        elif protocol == "ospf":
+            label = "<br/>".join(area + ": " + " ".join(interface for interface, interface_config in area_config["interface"])
+                for area, area_config in find_key(instance, "area", default=set()))
+        else:
+            label = ""
 
-    import_mode = parse_filter(instance["import"][-1] if "import" in instance else ("all",))
-    export_mode = parse_filter(instance["export"][-1] if "export" in instance else ("none",))
+        label = "<b>{} {}</b><br/>{}".format(protocol, name, label)
 
-    if protocol == "pipe":
-        dummy, peer_table = instance["peer"][-1]
+        if args.compress and "_template" in instance:
+            node = graph.get_node(find_key(instance, "_node"))
+            node.attr["label"] = "<{}<br/>{}>".format(node.attr["label"], label)
+        else:
+            instance["_node"] = "proto_" + name
+            subgraph = find_key(instance, "_subgraph", default=graph)
+            subgraph.add_node(instance["_node"], label="<{}>".format(label), color="blue", shape="box")
+
+
+# create edges
+
+for name, instance in instances.items():
+    table = find_option(instance, "table master;", use_default=True)[0]
+
+    import_mode = parse_filter(find_option(instance, "import all;", use_default=True))
+    export_mode = parse_filter(find_option(instance, "export none;", use_default=True))
+
+    if instance["_protocol"] == "pipe":
+        peer_table = find_option(instance, "peer table master;", use_default=True)[1]
+
         if import_mode:
             graph.add_edge("table_" + peer_table, "table_" + table, **filter_edge(import_mode))
         if export_mode:
             graph.add_edge("table_" + table, "table_" + peer_table, **filter_edge(export_mode))
     else:
-        if protocol == "static":
-            # Static protocols never export a route
-            export_mode = False
-            label = "<br/>".join(" ".join(route) for route in instance["route"])
-        elif protocol == "device":
+        if instance["_protocol"] == "device":
             # device protocol never exports or import routes
             export_mode = False
             import_mode = False
-            label = ""
-        elif protocol == "direct":
-            label = "<br/>".join("<br/>".join(interfaces) for interfaces in instance["interface"])
-        elif protocol == "kernel":
-            if "kernel" in instance:
-                label = "kernel table " + instance["kernel"][-1][1]
-            else:
-                label = ""
-        elif protocol == "bgp":
-            label = "neighbor " + " ".join(instance["neighbor"][-1])
-        elif protocol == "ospf":
-            label = "<br/>".join(area + ": " + " ".join(interface for interface, interface_config in area_config["interface"]) for area, area_config in instance["area"])
-        else:
-            label = ""
 
-        graph.add_node("proto_" + name, label="<<b>{} {}</b><br/>{}>".format(protocol, name, label), color="blue", shape="box")
         if import_mode:
-            graph.add_edge("proto_" + name, "table_" + table, **filter_edge(import_mode))
+            graph.add_edge(find_key(instance, "_node"), "table_" + table, **filter_edge(import_mode))
         if export_mode:
-            graph.add_edge("table_" + table, "proto_" + name, **filter_edge(export_mode))
+            graph.add_edge("table_" + table, find_key(instance, "_node"), **filter_edge(export_mode))
+
 
 print(graph.string())
