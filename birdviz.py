@@ -134,6 +134,8 @@ for _p in config["protocol"]:
             label = ""
         elif protocol == "direct":
             label = "<br/>".join("<br/>".join(interfaces) for interfaces in find_key(instance, "interface", default=set()))
+        elif protocol == "radv":
+            label = "<br/>".join("<br/>".join(interfaces) for interfaces in find_key(instance, "interface", default=set()))
         elif protocol == "kernel":
             kernel_table = find_option(instance, "kernel table none;", use_default=False)
             if kernel_table:
@@ -179,6 +181,10 @@ for name, instance in instances.items():
         if instance["_protocol"] == "device":
             # device protocol never exports or import routes
             export_mode = False
+            import_mode = False
+
+        if instance["_protocol"] == "radv":
+            # radv protocol never import routes
             import_mode = False
 
         if import_mode:
