@@ -20,6 +20,11 @@ will give you a svg-graph in example/howard.svg.
 
 Examples of my routers can be found in the examples-folder
 
+[sheldon.conf with -c](https://raw.githubusercontent.com/prauscher/birdviz/master/examples/sheldon.conf)
 ![sheldon.conf with -c](https://raw.githubusercontent.com/prauscher/birdviz/master/examples/sheldon.png)
+
+[rajesh.conf without extra flags](https://raw.githubusercontent.com/prauscher/birdviz/master/examples/rajesh.conf)
 ![rajesh.conf without extra flags](https://raw.githubusercontent.com/prauscher/birdviz/master/examples/rajesh.png)
+
+[howard.conf with -g table](https://raw.githubusercontent.com/prauscher/birdviz/master/examples/howard.conf)
 ![howard.conf with -g table](https://raw.githubusercontent.com/prauscher/birdviz/master/examples/howard.png)
