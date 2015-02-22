@@ -55,7 +55,7 @@ def find_key(p, key, default=None):
             return default
     return recur(p)
 
-def find_option(p, default_template, *, use_default=True):
+def find_option(p, default_template, use_default=True):
     option = birdconfig.parse(default_template)
     assert(len(option.keys()) == 1)
     default = next(iter(option.values())) if use_default else [None]
