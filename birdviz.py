@@ -154,7 +154,7 @@ for _p in config["protocol"]:
 
         if args.compress >= 1 and "_template" in instance:
             node = graph.get_node(find_key(instance, "_node"))
-            if args.compress <= 1:
+            if args.compress == 1:
                 node.attr["label"] = "<{}<br/>{}>".format(node.attr["label"], label)
         else:
             instance["_node"] = "proto_" + name
