@@ -8,7 +8,7 @@ import pygraphviz as pgv
 
 import argparse
 parser = argparse.ArgumentParser(description="BIRD/BIRD6 config visualizer")
-parser.add_argument("--compress", "-c", action="store_true", default=False, help="compress templated protocols into single nodes and approximate their imports/exports")
+parser.add_argument("--compress", "-c", action="count", default=0, help="compress templated protocols into single nodes and approximate their imports/exports")
 parser.add_argument("--group", "-g", metavar="TYPE", type=lambda x: set(x.split(',')), default=set(), help="group nodes of the given comma-separated types (table, template, static, kernel, bgp, ...) on the same rank")
 parser.add_argument("infile", metavar="FILE", help="config file to visualize")
 args = parser.parse_args()
@@ -96,7 +96,7 @@ for _t in config["template"]:
 
     label = "<font point-size='16'><b>template {}</b></font>".format(name)
 
-    if args.compress:
+    if args.compress >= 1:
         template["_node"] = "template_" + name
         graph.add_node(template["_node"], label="<{}<br/>>".format(label), shape="box")
         rank_groups["template"].add_node(graph.get_node(template["_node"]))
@@ -152,9 +152,10 @@ for _p in config["protocol"]:
 
         label = "<b>{} {}</b><br/>{}".format(protocol, name, label)
 
-        if args.compress and "_template" in instance:
+        if args.compress >= 1 and "_template" in instance:
             node = graph.get_node(find_key(instance, "_node"))
-            node.attr["label"] = "<{}<br/>{}>".format(node.attr["label"], label)
+            if args.compress == 1:
+                node.attr["label"] = "<{}<br/>{}>".format(node.attr["label"], label)
         else:
             instance["_node"] = "proto_" + name
             subgraph = find_key(instance, "_subgraph", default=graph)
