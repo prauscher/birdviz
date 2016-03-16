@@ -57,10 +57,15 @@ def find_key(p, key, default=None):
 
 def find_option(p, default_template, use_default=True):
     option = birdconfig.parse(default_template)
+    # default_template may only contain one config line
     assert(len(option.keys()) == 1)
-    default = next(iter(option.values())) if use_default else [None]
-    option = find_key(p, next(iter(option.keys())), default=default)
+    option_name = next(iter(option.keys()))
+    default = option[option_name] if use_default else [None]
+    option = find_key(p, option_name, default=default)
     return option[-1]
+
+def find_switch(p, option_name):
+    return find_option(p, option_name, use_default=False) != None
 
 
 # create table nodes
@@ -187,6 +192,20 @@ for name, instance in instances.items():
         if instance["_protocol"] == "radv":
             # radv protocol never import routes
             import_mode = False
+
+        if instance["_protocol"] == "kernel":
+            # kernel protocol imports alien routes only when learn; is specified
+            if not find_switch(instance, "learn;"):
+                if import_mode == True:
+                    import_mode = "(no alien)"
+                elif isinstance(import_mode, str):
+                    import_mode = import_mode + " w/o alien"
+            # ... and exports device routes only when device routes; is specified
+            if not find_switch(instance, "device routes;"):
+                if export_mode == True:
+                    export_mode = "(no device routes)"
+                elif isinstance(export_mode, str):
+                    export_mode = export_mode + " w/o device routes"
 
         if import_mode:
             graph.add_edge(find_key(instance, "_node"), "table_" + table, **filter_edge(import_mode))
